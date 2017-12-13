@@ -102,42 +102,56 @@ int _yr_process_detach(
 }
 
 
-YR_API const uint8_t* yr_process_fetch_memory_block_data(
-    YR_MEMORY_BLOCK* block)
+YR_API const uint8_t* yr_process_fetch_memory_block_data_chunk(
+    YR_MEMORY_BLOCK* block, size_t offset, size_t length)
 {
-  SIZE_T read;
+  size_t read;
 
   YR_PROC_ITERATOR_CTX* context = (YR_PROC_ITERATOR_CTX*) block->context;
   YR_PROC_INFO* proc_info = (YR_PROC_INFO*) context->proc_info;
 
-  if (context->buffer_size < block->size)
+  if (offset > block->size)
+  {
+    return NULL;
+  }
+
+  if (SIZE_MAX - offset < length)
+  {
+    length = SIZE_MAX - offset;
+  }
+
+  if (length + offset > block->size)
+  {
+    length = block->size - offset;
+  }
+
+  if (context->buffer_size < length)
   {
     if (context->buffer != NULL)
       yr_free((void*) context->buffer);
 
-    context->buffer = (const uint8_t*) yr_malloc(block->size);
-
-    if (context->buffer != NULL)
-    {
-      context->buffer_size = block->size;
-    }
-    else
+    context->buffer = (const uint8_t*) yr_malloc(length);
+    if (context->buffer == NULL)
     {
       context->buffer_size = 0;
       return NULL;
     }
+
+    context->buffer_size = length;
   }
 
   if (ReadProcessMemory(
         proc_info->hProcess,
-        (LPCVOID) block->base,
+        (LPCVOID) block->base + offset,
         (LPVOID) context->buffer,
-        (SIZE_T) block->size,
+        (size_t) length,
         &read) == FALSE)
-    {
-      return NULL;
-    }
+  {
+    return NULL;
+  }
 
+  context->current_block_offset = offset;
+  context->current_block_length = length;
   return context->buffer;
 }
 

@@ -36,6 +36,8 @@ typedef struct _YR_PROC_ITERATOR_CTX {
   const uint8_t*  buffer;
   size_t          buffer_size;
   YR_MEMORY_BLOCK current_block;
+  size_t          current_block_offset;
+  size_t          current_block_length;
   void*           proc_info;
 } YR_PROC_ITERATOR_CTX;
 
@@ -54,5 +56,8 @@ YR_API YR_MEMORY_BLOCK* yr_process_get_next_memory_block(
 
 YR_API const uint8_t* yr_process_fetch_memory_block_data(
     YR_MEMORY_BLOCK* block);
+
+YR_API const uint8_t* yr_process_fetch_memory_block_data_chunk(
+    YR_MEMORY_BLOCK* block, size_t offset, size_t length);
 
 #endif

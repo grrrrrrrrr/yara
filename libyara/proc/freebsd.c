@@ -97,41 +97,56 @@ int _yr_process_detach(
 }
 
 
-YR_API const uint8_t* yr_process_fetch_memory_block_data(
-    YR_MEMORY_BLOCK* block)
+YR_API const uint8_t* yr_process_fetch_memory_block_data_chunk(
+    YR_MEMORY_BLOCK* block, size_t offset, size_t length)
 {
   YR_PROC_ITERATOR_CTX* context = (YR_PROC_ITERATOR_CTX*) block->context;
   YR_PROC_INFO* proc_info = (YR_PROC_INFO*) context->proc_info;
   struct ptrace_io_desc io_desc;
 
-  if (context->buffer_size < block->size)
+  if (offset > block->size)
+  {
+    return NULL;
+  }
+
+  if (SIZE_MAX - offset < length)
+  {
+    length = SIZE_MAX - offset;
+  }
+
+  if (length + offset > block->size)
+  {
+    length = block->size - offset;
+  }
+
+  if (context->buffer_size < length)
   {
     if (context->buffer != NULL)
       yr_free((void*) context->buffer);
 
-    context->buffer = (const uint8_t*) yr_malloc(block->size);
+    context->buffer = (const uint8_t*) yr_malloc(length);
 
-    if (context->buffer != NULL)
-    {
-      context->buffer_size = block->size;
-    }
-    else
+    if (context->buffer == NULL)
     {
       context->buffer_size = 0;
       return NULL;
     }
+
+    context->buffer_size = length;
   }
 
   io_desc.piod_op = PIOD_READ_D;
-  io_desc.piod_offs = (void*)block->base;
+  io_desc.piod_offs = (void*)block->base + offset;
   io_desc.piod_addr = (void*)context->buffer;
-  io_desc.piod_len = block->size;
+  io_desc.piod_len = length;
 
   if (ptrace(PT_IO, proc_info->pid, (char*)&io_desc, 0) == -1)
   {
     return NULL;
   }
 
+  context->current_block_offset = offset;
+  context->current_block_length = length;
   return context->buffer;
 }
 

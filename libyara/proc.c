@@ -80,3 +80,10 @@ YR_API int yr_process_close_iterator(
 
   return ERROR_SUCCESS;
 }
+
+
+YR_API const uint8_t* yr_process_fetch_memory_block_data(
+    YR_MEMORY_BLOCK* block)
+{
+  return yr_process_fetch_memory_block_data_chunk(block, 0, block->size);
+}
